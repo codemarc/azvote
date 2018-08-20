@@ -1,0 +1,108 @@
+az --version
+
+# Get a list of subscriptions for the logged in account.
+az account list --all --refresh --output table
+
+# Visual Studio Professional
+az account set --subscription af27105c-e0fa-49c9-be9d-2b62cabd6101
+
+# BuildingLink
+# az account set --subscription a613584d-2864-4a24-ae33-af51480bd96c
+
+# create the resource group
+az group create --name myResourceGroup --location eastus
+
+{
+  "id": "/subscriptions/af27105c-e0fa-49c9-be9d-2b62cabd6101/resourceGroups/myResourceGroup",
+  "location": "eastus",
+  "managedBy": null,
+  "name": "myResourceGroup",
+  "properties": {
+    "provisioningState": "Succeeded"
+  },
+  "tags": null
+}
+
+
+# create the container registry
+az acr create --resource-group myResourceGroup --name mjgblkacr --sku Basic
+
+{
+  "adminUserEnabled": false,
+  "creationDate": "2018-08-20T19:28:54.827907+00:00",
+  "id": "/subscriptions/af27105c-e0fa-49c9-be9d-2b62cabd6101/resourceGroups/myResourceGroup/providers/Microsoft.ContainerRegistry/registries/mjgblkacr",
+  "location": "eastus",
+  "loginServer": "mjgblkacr.azurecr.io",
+  "name": "mjgblkacr",
+  "provisioningState": "Succeeded",
+  "resourceGroup": "myResourceGroup",
+  "sku": {
+    "name": "Basic",
+    "tier": "Basic"
+  },
+  "status": null,
+  "storageAccount": null,
+  "tags": {},
+  "type": "Microsoft.ContainerRegistry/registries"
+}
+
+# Log in to the container registry
+az acr login --name mjgblkacr
+
+
+# Tag a container image
+az acr list --resource-group myResourceGroup --query "[].{acrLoginServer:loginServer}" --output table
+
+# docker tag azure-vote-front mjgblkacr.azurecr.io/azure-vote-front:v1
+# docker push mjgblkacr.azurecr.io/azure-vote-front:v1
+
+# List images in registry
+az acr repository list --name mjgblkacr --output table
+az acr repository show-tags --name mjgblkacr --repository azure-vote-front --output table
+
+# Create a service principal
+az ad sp create-for-rbac --skip-assignment
+
+{
+  "appId": "7416cd14-d81c-4f76-bdaa-c60fc77e9dc1",
+  "displayName": "azure-cli-2018-08-20-19-31-44",
+  "name": "http://azure-cli-2018-08-20-19-31-44",
+  "password": "506a4fb5-42fc-4798-8aac-f881b05756ca",
+  "tenant": "6f1f7fec-9a73-489e-a52e-eee311a48135"
+}
+
+# Configure ACR authentication
+az acr show --resource-group myResourceGroup --name mjgblkacr --query "id" --output tsv
+
+/subscriptions/af27105c-e0fa-49c9-be9d-2b62cabd6101/resourceGroups/myResourceGroup/providers/Microsoft.ContainerRegistry/registries/mjgblkacr
+
+
+az role assignment create --assignee 7416cd14-d81c-4f76-bdaa-c60fc77e9dc1 --scope /subscriptions/af27105c-e0fa-49c9-be9d-2b62cabd6101/resourceGroups/myResourceGroup/providers/Microsoft.ContainerRegistry/registries/mjgblkacr --role Reader
+
+{
+  "canDelegate": null,
+  "id": "/subscriptions/af27105c-e0fa-49c9-be9d-2b62cabd6101/resourceGroups/myResourceGroup/providers/Microsoft.ContainerRegistry/registries/mjgblkacr/providers/Microsoft.Authorization/roleAssignments/8f5638ce-c4ea-4c7e-89b9-fa2f5b0ef4e8",
+  "name": "8f5638ce-c4ea-4c7e-89b9-fa2f5b0ef4e8",
+  "principalId": "a9f6481d-24c4-4f90-940e-6152b11d04ff",
+  "resourceGroup": "myResourceGroup",
+  "roleDefinitionId": "/subscriptions/af27105c-e0fa-49c9-be9d-2b62cabd6101/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7",
+  "scope": "/subscriptions/af27105c-e0fa-49c9-be9d-2b62cabd6101/resourceGroups/myResourceGroup/providers/Microsoft.ContainerRegistry/registries/mjgblkacr",
+  "type": "Microsoft.Authorization/roleAssignments"
+}
+
+
+# Create a Kubernetes cluster
+az aks create --resource-group myResourceGroup --name myAKSCluster --node-count 1 --service-principal 7416cd14-d81c-4f76-bdaa-c60fc77e9dc1 --client-secret 506a4fb5-42fc-4798-8aac-f881b05756ca --generate-ssh-keys
+
+# Install the Kubernetes CLI
+az aks install-cli
+
+# Connect to cluster using kubectl
+az aks get-credentials --resource-group myResourceGroup --name myAKSCluster
+
+# Update the manifest file
+az acr list --resource-group myResourceGroup --query "[].{acrLoginServer:loginServer}" --output table
+
+# kubectl apply -f azure-vote-all-in-one-redis.yaml
+
+# kubectl get service azure-vote-front --watch
